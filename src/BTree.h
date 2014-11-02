@@ -3,6 +3,7 @@
 
 #include "TreeNode.h"
 #include <cstddef>
+#include <queue>
 using namespace std;
 
 namespace minisql {
@@ -20,21 +21,42 @@ class BTree {
  public:
   int m() const { return m_; }
   const int height() const { return height_; }
-  const TreeNode<T>* root() const { return root; }
-  TreeNode<T>* root() { return root; }
+  const TreeNode<T>* root() const { return root_; }
+  TreeNode<T>* root() { return root_; }
 
  public:
   // TODO Implement B-Tree operations
   bool Insert(T key) {
-    return root_->Insert(key);
+    root_ = root_->Insert(key);
+    return true;
   }
+
+  bool Insert(int num, T* key) {
+    for (int i = 0; i != num; ++i)
+      root_ = root_->Insert(key[i]);
+    return true;
+  }
+
   bool Delete(T key) {}
   T Search(T key) {}
-  void Print() {}
 
- private:
-  void Split() {}
-  void Traverse() {}
+  void Print(void (TreeNode<T>::*printer)() const) {
+    queue<const TreeNode<T>*> print_queue;
+    print_queue.push(root_);
+    const TreeNode<T>* temp_node;
+    cout << endl;
+    while (0 != print_queue.size()) {
+      temp_node = print_queue.front();
+      if (0 == temp_node->subnodes())  // A leaf node
+        (temp_node->*printer)();
+      else
+        for (int i = 0 ;i != temp_node->size() + 1; ++i)
+          print_queue.push(temp_node->subnode(i));
+      print_queue.pop();
+    }
+    cout << "\n" << endl;
+    return;
+  }
   
  private:
   const int m_;

@@ -2,6 +2,7 @@
 #define MINISQL_SRC_TREENODE_H_
 
 #include <cstddef>
+#include <iostream>
 using namespace std;
 
 namespace minisql {
@@ -32,7 +33,8 @@ class TreeNode {
   // Getting&Setting functions
   int m() const { return m_; }
   int size() const {return size_; }
-  const T* keys(int i) const { return keys_[i]; }
+  const T keys(int i) const { return keys_[i]; }
+  const TreeNode<T>* const* subnodes() const { return subnodes_; }
   const TreeNode<T>* subnode(int i) const { return subnodes_[i]; }
   const TreeNode<T>* parent() const { return parent_; }
   const TreeNode<T>* next_sibling() const { return next_sibling_; }
@@ -76,6 +78,13 @@ class TreeNode {
  public:
   // Fundamental operations
   TreeNode<T>* Insert(T key);
+  void Print() const {
+    cout << "|* ";
+    for (int i = 0; i != size_; ++i)
+      cout << keys_[i] << " ";
+    cout << "*| ";
+    return;
+  }
 
  private:
   // Inline tool functions
@@ -86,8 +95,8 @@ class TreeNode {
   // Private variables
   const int m_;
   int size_;
-  T keys_[];
-  TreeNode<T>* subnodes_[];
+  T* keys_;
+  TreeNode<T>** subnodes_;
   TreeNode<T>* parent_;
   TreeNode<T>* next_sibling_;
 
@@ -96,7 +105,6 @@ class TreeNode {
   void operator=(const TreeNode<T>&);
   TreeNode<T>(const TreeNode<T>&);
 };
-
 
 template<typename T>
 TreeNode<T>* TreeNode<T>::Insert(T key) {
@@ -109,6 +117,7 @@ TreeNode<T>* TreeNode<T>::Insert(T key) {
         if (key < keys_[i] || i == size_ - 1) {
           for (int j = size_ - 1; j > i; --j)
             keys_[j] = keys_[j - 1];
+          keys_[i] = key;
           break;
         }
       return this;
@@ -117,10 +126,12 @@ TreeNode<T>* TreeNode<T>::Insert(T key) {
       TreeNode<T>* temp_node = split(key);
       TreeNode<T>* parent = new TreeNode<T>(m_);
       parent->subnodes_ = new TreeNode<T>*[m_]{0};
-      parent_ = parent;
-      temp_node->parent_ = parent;
       parent->subnodes_[0] = this;
       parent->subnodes_[1] = temp_node;
+      parent->keys_[0] = temp_node->keys_[0];
+      ++(parent->size_);
+      parent_ = parent;
+      temp_node->parent_ = parent;
       return parent;
     }
   }  // (END) Single root node
@@ -132,8 +143,9 @@ TreeNode<T>* TreeNode<T>::Insert(T key) {
       keys_[size_ - 1] = key;
       for (int i = 0; i != size_; ++i)
         if (key < keys_[i] || i == size_ - 1) {
-          for (int j = size_ - 1; j > i; --j)
+          for (int j = size_ - 1; j != i; --j)
             keys_[j] = keys_[j - 1];
+          keys_[i] = key;
           break;
         }
       return this;
@@ -155,15 +167,17 @@ TreeNode<T>* TreeNode<T>::Insert(T key) {
                 break;
               }
           }
+          return this;
         }       // (END) Next sibling not full
         else {  // Next sibling full, split
           TreeNode<T>* temp_node = split(key);
+          return next_sibling_;
         }
       }       // (END) Has next sibling
       else {  // Does not have a next sibling, split
         TreeNode<T>* temp_node = split(key);
+        return next_sibling_;
       }
-      return next_sibling_;
     }
   }  // (END) Leaf, non-root node
 
@@ -174,7 +188,7 @@ TreeNode<T>* TreeNode<T>::Insert(T key) {
         TreeNode<T>* temp_node = subnodes_[i]->Insert(key);
         if (temp_node == subnodes_[i]) {     // No splitting happened
           if (0 == subnodes_[i]->subnodes_)  // Subnodes are leaves
-            if (subnodes_[i + 1]->keys_[0] < keys_[i])
+            if (i != size_ && subnodes_[i + 1]->keys_[0] < keys_[i])
               keys_[i] = subnodes_[i + 1]->keys_[0];
           return this;
         }
@@ -188,7 +202,7 @@ TreeNode<T>* TreeNode<T>::Insert(T key) {
               keys_[j] = keys_[j - 1];
               subnodes_[j + 1] = subnodes_[j];
             }
-            keys_[i] = (0 == temp_node->subnodes_) ? temp_node->keys_[0] : subnodes_[i]->keys_[subnodes_->size_];
+            keys_[i] = (0 == temp_node->subnodes_) ? temp_node->keys_[0] : subnodes_[i]->keys_[subnodes_[i]->size_];
             subnodes_[i + 1] = temp_node;
             ++size_;
             return this;
@@ -204,7 +218,7 @@ TreeNode<T>* TreeNode<T>::Insert(T key) {
         TreeNode<T>* temp_node = subnodes_[i]->Insert(key);
         if (temp_node == subnodes_[i]) {     // No splitting happened
           if (0 == subnodes_[i]->subnodes_)  // Subnodes are leaves
-            if (subnodes_[i + 1]->keys_[0] < keys_[i])
+            if (i != size_ && subnodes_[i + 1]->keys_[0] < keys_[i])
               keys_[i] = subnodes_[i + 1]->keys_[0];
           return this;
         }
@@ -213,10 +227,12 @@ TreeNode<T>* TreeNode<T>::Insert(T key) {
             temp_node = split(i, temp_node);
             TreeNode<T>* parent = new TreeNode<T>(m_);
             parent->subnodes_ = new TreeNode<T>*[m_]{0};
-            parent_ = parent;
-            temp_node->parent_ = parent;
             parent->subnodes_[0] = this;
             parent->subnodes_[1] = temp_node;
+            parent->keys_[0] = keys_[size_];
+            ++(parent->size_);
+            parent_ = parent;
+            temp_node->parent_ = parent;
             return parent;
           }
           else {  // Node not full, update
@@ -224,7 +240,7 @@ TreeNode<T>* TreeNode<T>::Insert(T key) {
               keys_[j] = keys_[j - 1];
               subnodes_[j + 1] = subnodes_[j];
             }
-            keys_[i] = (0 == temp_node->subnodes_) ? temp_node->keys_[0] : subnodes_[i]->keys_[subnodes_->size_];
+            keys_[i] = (0 == temp_node->subnodes_) ? temp_node->keys_[0] : subnodes_[i]->keys_[subnodes_[i]->size_];
             subnodes_[i + 1] = temp_node;
             ++size_;
             return this;
@@ -256,6 +272,7 @@ TreeNode<T>* TreeNode<T>::split(T key) {
     size_ = size_ / 2 + 1;
   }       // (END) Move the last round_up(size_/2) keys, key left in the origin node
   else {  // Move the last round_down(size/2) keys, key inserted into the sibling
+    /*
     int i = (size_ + 1) / 2;
     int j = 0;
     while (i != size_) {
@@ -263,14 +280,43 @@ TreeNode<T>* TreeNode<T>::split(T key) {
         temp_node->keys_[j] = key;
         ++(temp_node->size_);
         ++j;
-        continue;
+        break;
       }
       temp_node->keys_[j] = keys_[i];
       ++(temp_node->size_);
       ++j;
       ++i;
     }
+    while (i != size_) {
+      temp_node->keys_[j] = keys_[i];
+      ++(temp_node->size_);
+      ++j;
+      ++i;
+    }
     size_ = (size_ + 1) / 2;
+    */
+    int i = size_;
+    int j = (size_ + 1) / 2;
+    while (0 != j) {
+      if (key >= keys_[i - 1]) {
+        temp_node->keys_[j - 1] = key;
+        ++(temp_node->size_);
+        --j;
+        break;
+      }
+      temp_node->keys_[j - 1] = keys_[i - 1];
+      ++(temp_node->size_);
+      --size_;
+      --i;
+      --j;
+    }
+    while (0 != j) {
+      temp_node->keys_[j - 1] = keys_[i - 1];
+      ++(temp_node->size_);
+      --size_;
+      --i;
+      --j;
+    }
   }  // (END) Move the last round_down(size/2) keys, key inserted into the sibling
   return temp_node;
 }
@@ -306,31 +352,44 @@ TreeNode<T>* TreeNode<T>::split(int index, TreeNode<T>* subnode) {
   else {  // The subnode should be moved to the sibling
     int j = (m_ + 1) / 2 - 1;
     int i = m_ - 1;
-    while (j != 0) {
+    while (0 != j) {
       if (i == index) {
         temp_node->subnodes_[j] = subnode;
+        subnode->parent_ = temp_node;
         temp_node->keys_[j - 1] = (0 == subnode->subnodes_) ? subnode->keys_[0] : subnodes_[index]->keys_[size_];  // XXX
         ++(temp_node->size_);
         --j;
+        break;
       }
-      else {
-        temp_node->subnodes_[j] = this->subnodes_[i];
-        temp_node->keys_[j - 1] = this->keys_[i - 1];
-        ++(temp_node->size_);
-        --size_;
-        --i;
-        --j;
-      }
+      temp_node->subnodes_[j] = this->subnodes_[i];
+      temp_node->subnodes_[j]->parent_ = temp_node;
+      temp_node->keys_[j - 1] = this->keys_[i - 1];
+      ++(temp_node->size_);
+      --size_;
+      --i;
+      --j;
     }
-    if (i == index) {  // j == 0
+    while (0 != j) {
+      temp_node->subnodes_[j] = this->subnodes_[i];
+      temp_node->subnodes_[j]->parent_ = temp_node;
+      temp_node->keys_[j - 1] = this->keys_[i - 1];
+      ++(temp_node->size_);
+      --size_;
+      --i;
+      --j;
+    }
+    if (i != index) {  // j == 0
       temp_node->subnodes_[j] = subnode;
+      subnode->parent_ = temp_node;
       keys_[size_] = (0 == subnode->subnodes_) ? subnode->keys_[0] : subnodes_[index]->keys_[size_];  // XXX
     }
     else {
       temp_node->subnodes_[j] = this->subnodes_[i];
+      temp_node->subnodes_[j]->parent_ = temp_node;
       --size_;
     }
   }  // (END) The subnode moved to the sibling
+  subnodes_[size_]->next_sibling_ = 0;
   return temp_node;
 }
 

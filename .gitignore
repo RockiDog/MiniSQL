@@ -11,6 +11,10 @@
 # Executables
 *.out
 
+# Directories
+bin/
+gen/
+
 # Vim Configuration Files
 *.swp
 *.vim
