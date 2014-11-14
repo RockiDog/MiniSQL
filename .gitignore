@@ -15,6 +15,10 @@
 bin/
 gen/
 
+# Eclipse Project Files
+.classpath
+.project
+
 # Vim Configuration Files
 *.swp
 *.vim
