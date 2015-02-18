@@ -2,9 +2,9 @@
 #define MINISQL_SRC_B_TREE_H_
 
 #include "TreeNode.h"
+#include <cassert>
 #include <cstddef>
 #include <queue>
-using namespace std;
 
 namespace minisql {
 
@@ -12,7 +12,7 @@ namespace minisql {
 template<typename T>
 class BTree {
  public:
-  BTree(int m): m_(m), height_(0), root_(0) {
+  BTree(int m): m_(m), root_(0) {
     root_ = new TreeNode<T>(m_);
   }
   ~BTree() {  // Destroy the whole tree
@@ -23,13 +23,12 @@ class BTree {
 
  public:
   int m() const { return m_; }
-  const int height() const { return height_; }
   const TreeNode<T>* root() const { return root_; }
   TreeNode<T>* root() { return root_; }
 
  public:
   // Implement B-Tree operations
-  bool Insert(T key) {
+  bool Insert(const T& key) {
     root_ = root_->Insert(key);
     return true;
   }
@@ -40,14 +39,14 @@ class BTree {
     return true;
   }
 
-  bool Delete(T key) {
+  bool Delete(const T& key) {
     TreeNode<T>* temp_node = root_->Delete(key);
     if (0 == temp_node)        // Key not found
       return false;
     
     if (0 == root_->size()) {  // Shallow the tree
       if (0 == root_->subnodes()) {
-        cout << "Empty tree!" << endl;
+        std::cout << "Empty tree!" << std::endl;
       } else {
         root_ = root_->subnode(0);
         delete root_->parent();
@@ -59,25 +58,35 @@ class BTree {
     }
   }
 
-  bool  Search(const T& key) {
+  bool Update(const T& old_key, const T& new_key) {
+    if (false == Delete(old_key)) return false;
+    if (false == Insert(new_key)) return false;
+    return true;
+  }
+
+  const T* Search(const T& key) {
     return root_->Search(key);
+  }
+
+  const T* Retrieve(const T& key) {
+    return root_->Retrieve(key);
   }
 
   void Print(void (TreeNode<T>::*printer)() const) {
     if (0 == root_->size() && 0 == root_->subnodes()) {
-      cout << "Empty tree!" << endl;
+      std::cout << "Empty tree!" << std::endl;
       return;
     }
     
-    queue<const TreeNode<T>*> print_queue;
+    std::queue<const TreeNode<T>*> print_queue;
     print_queue.push(root_);
     print_queue.push(0);
     const TreeNode<T>* temp_node;
-    cout << endl;
+    std::cout << std::endl;
     while (0 != print_queue.size()) {
       temp_node = print_queue.front();
       if (0 == temp_node) {
-        cout << "\n" << endl;
+        std::cout << "\n" << std::endl;
         if (print_queue.size() > 1)
           print_queue.push(0);
       } else {
@@ -93,7 +102,6 @@ class BTree {
   
  private:
   const int m_;
-  int height_;
   TreeNode<T>* root_;
 
  private:
